@@ -1,3 +1,6 @@
 /legacy/*
 /output/*
+/python/driver/*
+/python/output/*
 /.DS_Store
+/python/.DS_Store

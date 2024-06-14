@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"time"
-
-	"github.com/ParaguayanViking/productsParaguay/companies"
 )
 
 func main() {
@@ -16,8 +14,6 @@ func main() {
 
 	// companies.Get_all_products_casarica_con()
 	// companies.Get_all_products_arete()
-
-	companies.Test_headless()
 
 	elapsed := time.Since(start)
 	fmt.Printf("Time elapsed: %s\n", elapsed)
