@@ -78,6 +78,8 @@ def main():
 
                 # write the products into a csv file called "gg_products.csv" in the output folder, if the file does not exist, it will be created
                 df = pd.DataFrame(list_of_products)
+                # Remove product duplicates
+                df.drop_duplicates(subset=["name"], keep="first", inplace=True)
                 df.to_csv("./output/gg_products.csv", index=False)
 
                 exit_condition = True
