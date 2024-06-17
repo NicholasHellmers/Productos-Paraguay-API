@@ -3,11 +3,11 @@
 ## Descripción
 This scraper was made under the intention of getting all products available online that are relevant to the Paraguayan market.
 
-Stack:
+## Stack:
 - Python (Selenium)
 - Go (GoColly)
 
-## Todo:
+## TODOs:
 - Store coverage:
     - [x] Superseis
     - [x] Stock
