@@ -34,24 +34,28 @@ class Product:
     image_url: str
 
 def construct_product(product: webdriver.remote.webelement.WebElement, category: str) -> (Product | None):
-        product_media = product.find_element(By.CLASS_NAME, "thumbnail")
-        product_body = product.find_element(By.CLASS_NAME, "media-body")
+        product_media = product.find_elements(By.CLASS_NAME, "img")
+        
+        if len(product_media) > 0:
+            product_images = product_media[0].find_elements(By.TAG_NAME, "img")
+        else:
+            print("There's an error at product_media")
+            return None
 
-        new_product = Product(
-            name = product_body.find_element(By.TAG_NAME, "a").get_attribute("textContent").strip(),
-            price = product_body.find_element(By.CLASS_NAME, "single_add_to_cart_button.add_to_cart_button.add_to_cart_button_contado.button").text.strip(),
-            category = category,
-            product_url = product_media.find_element(By.TAG_NAME, "a").get_attribute("href"),
-            image_url = product_media.find_element(By.TAG_NAME, "img").get_attribute("src")
-        )
+        product_body = product.find_element(By.CLASS_NAME, "info")
 
-        # Remove "ver detalles" from the product name if present
-        if "ver detalles" in new_product.name:
-            new_product.name = new_product.name.replace("ver detalles", "").strip()
-
-        # Remove \n from the product price if present
-        if "\n" in new_product.price:
-            new_product.price = new_product.price.replace("\n", "").strip()
+        if len(product_media) > 0:
+            new_product = Product(
+                name = product_body.find_element(By.TAG_NAME, "a").get_attribute("textContent").strip(),
+                price = product_body.find_element(By.CLASS_NAME, "monto").text.strip(),
+                category = category,
+                product_url = product_media[ len(product_media)  - 1 ].get_attribute("href"),
+                image_url = product_images[ len(product_images) - 1 ].get_attribute("src")
+            )
+        else:
+            name = product_body.find_element(By.TAG_NAME, "a").get_attribute("textContent").strip()
+            print(f"There's an error at {name} product")
+            return None
 
         return new_product
 
@@ -70,14 +74,13 @@ def get_categories() -> (list[str] | None):
 
     start_time = time.time()
 
-    driver.get("https://www.tupi.com.py/")
+    driver.get("https://www.bristol.com.py/")
 
-    categories = driver.find_elements(By.CLASS_NAME, "icon.tienesubmenu.icon-news")
+    categories = driver.find_elements(By.CLASS_NAME, "cols2")
 
-    categories = [ (category.get_attribute("textContent").strip(), category.get_attribute("href")) for category in categories ]
-    categories = [category for category in categories if category[1] != ""]
-
-    time.sleep(5)
+    categories = categories[0].find_elements(By.CLASS_NAME, "hdr")
+    
+    categories = [ (category.find_element(By.TAG_NAME, "a").get_attribute("textContent").strip(), category.find_element(By.TAG_NAME, "a").get_attribute("href")) for category in categories ]
 
     driver.quit()
 
@@ -109,38 +112,29 @@ def thread_function(category: str, url: str, ) -> (list[Product] | None):
 
     exit_condition = False
 
-    time.sleep(5)
-
-    error_counter = 0
-
     while exit_condition == False:
 
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        # Find the button with id "catalogoPaginado", if present, it means that there are more products to load
+        paginadoCheck = driver.find_element(By.ID, "catalogoPaginado").find_element(By.CLASS_NAME, "txt")
 
-        # Check if there's an element with the tag "jscroll-added" present
-        load_element = driver.find_elements(By.CLASS_NAME, "jscroll-added")
+        load_check = paginadoCheck.find_elements(By.TAG_NAME, "span")
 
-        products = load_element[len(load_element) - 1].find_elements(By.CLASS_NAME, "jscroll-loading")
+        bounds = [ int(load.get_attribute("textContent").strip()) for load in load_check ]
 
-        if len(products) == 0:
-            check_products = load_element[len(load_element) - 1].find_elements(By.CLASS_NAME, "product_unit.product.vista_")
+        print(bounds)
 
-            if len(check_products) == 0:
-                time.sleep(2)
-                error_counter += 1
-
-                if error_counter > 5:
-                    exit_condition = True
-        elif len(products) > 0:
-            error_counter = 0
+        # If there is a button, scroll down
+        if bounds[1] - bounds[0] > 0:
+            print("there are more products to load")
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(3)
         else:
-            print("Error")
+            print(f"no more products to load for category {category}")
             exit_condition = True
 
+    product_view = driver.find_element(By.ID, "catalogoProductos")
 
-
-
-    products = driver.find_elements(By.CLASS_NAME, "product_unit.product.vista_")
+    products = product_view.find_elements(By.CLASS_NAME, "cnt")
 
     print(f"Category: {category}, products: {len(products)}")
 
@@ -162,6 +156,8 @@ def main():
     # and return the results to the main function
     print("Launching threads...")
     threads = []
+    # Remove category with url "https://www.bristol.com.py/catalogo?tipo=tecnologia-ai"
+    categories = [ category for category in categories if category[1] != "https://www.bristol.com.py/catalogo?tipo=tecnologia-ai" ]
     for category in categories:
         thread = ThreadWithReturnValue(target=thread_function, args=(category[0], category[1]))
         thread.start()
@@ -171,14 +167,17 @@ def main():
     print("Waiting for threads to finish...")
     list_of_products = []
     for thread in threads:
-        list_of_products += thread.join()
+        if thread.join() is not None:
+            list_of_products += thread.join()
+        else:
+            print(f"There was an error with the thread {thread}")
 
     # Print the results of the threads onto a tupi.csv file
-    print("Writing results to tupi.csv")
+    print("Writing results to bristol.csv")
     df = pd.DataFrame(list_of_products)
     # Remove duplicates
     df.drop_duplicates(subset=["name"], keep="first", inplace=True)
-    df.to_csv("./output/tupi.csv", index=False)
+    df.to_csv("./output/bristol.csv", index=False)
     
 if __name__ == "__main__":
     main()
