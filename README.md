@@ -15,8 +15,11 @@ This scraper was made under the intention of getting all products available onli
     - [x] Tupi
     - [x] Casa Rica
     - [x] Arete
-    - [ ] Biggie
+    - [x] Biggie (Needs image url validation)
     - [ ] Nissei
     - [ ] Hendyla
     - [x] Bristol
     - [ ] Tienda Naranja
+    - [ ] Super Más
+    - [ ] Los jardines
+    - [ ] Monalisa
